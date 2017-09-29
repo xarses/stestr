@@ -38,7 +38,7 @@ class TestrConf(object):
                         serial=False, worker_path=None,
                         concurrency=0, blacklist_file=None,
                         whitelist_file=None, black_regex=None,
-                        randomize=False):
+                        randomize=False, subunit2sql_uri=None):
         """Get a test_processor.TestProcessorFixture for this config file
 
         Any parameters about running tests will be used for initialize the
@@ -81,6 +81,9 @@ class TestrConf(object):
             test list.
         :param bool randomize: Randomize the test order after they are
             partitioned into separate workers
+        :param str subunit2sql_uri: A sqlalchemy uri for an external
+            subunit2sql DB to use for historical timing data instead of the
+            configured repository
 
         :returns: a TestProcessorFixture object for the specified config file
             and any arguments passed into this function
@@ -117,7 +120,9 @@ class TestrConf(object):
                     return match.group(0)
         else:
             group_callback = None
-
+        if not subunit2sql_uri and self.parser.has_option('DEFAULT',
+                                                          'subunit2sql_uri'):
+            subunit2sql_uri = self.parser.get('DEFAULT', 'subunit2sql_uri')
         # Handle the results repository
         repository = util.get_repo_open(repo_type, repo_url)
         return test_processor.TestProcessorFixture(
@@ -125,4 +130,5 @@ class TestrConf(object):
             test_filters=regexes, group_callback=group_callback, serial=serial,
             worker_path=worker_path, concurrency=concurrency,
             blacklist_file=blacklist_file, black_regex=black_regex,
-            whitelist_file=whitelist_file, randomize=randomize)
+            whitelist_file=whitelist_file, randomize=randomize,
+            subunit2sql_uri=subunit2sql_uri)

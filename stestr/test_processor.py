@@ -74,13 +74,16 @@ class TestProcessorFixture(fixtures.Fixture):
          separate regex on each newline.
     :param boolean randomize: Randomize the test order after they are
         partitioned into separate workers
+    :param str subunit2sql_uri: A sqlalchemy uri for an external subunit2sql DB
+        to use for historical timing data instead of the configured repository
     """
 
     def __init__(self, test_ids, cmd_template, listopt, idoption,
                  repository, parallel=True, listpath=None,
                  test_filters=None, group_callback=None, serial=False,
                  worker_path=None, concurrency=0, blacklist_file=None,
-                 black_regex=None, whitelist_file=None, randomize=False):
+                 black_regex=None, whitelist_file=None, randomize=False,
+                 subunit2sql_uri=None):
         """Create a TestProcessorFixture."""
 
         self.test_ids = test_ids
@@ -101,6 +104,7 @@ class TestProcessorFixture(fixtures.Fixture):
         self.whitelist_file = whitelist_file
         self.black_regex = black_regex
         self.randomize = randomize
+        self.subunit2sql_uri = subunit2sql_uri
 
     def setUp(self):
         super(TestProcessorFixture, self).setUp()
@@ -245,10 +249,9 @@ class TestProcessorFixture(fixtures.Fixture):
         # If we have multiple workers partition the tests and recursively
         # create single worker TestProcessorFixtures for each worker
         else:
-            test_id_groups = scheduler.partition_tests(test_ids,
-                                                       self.concurrency,
-                                                       self.repository,
-                                                       self._group_callback)
+            test_id_groups = scheduler.partition_tests(
+                test_ids, self.concurrency, self.repository,
+                self._group_callback, subunit2sql_uri=self.subunit2sql_uri)
         for test_ids in test_id_groups:
             if not test_ids:
                 # No tests in this partition

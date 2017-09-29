@@ -15,14 +15,16 @@ import itertools
 import multiprocessing
 import operator
 import random
+import sys
 
 import yaml
 
 from stestr import selection
+from stestr import utils
 
 
 def partition_tests(test_ids, concurrency, repository, group_callback,
-                    randomize=False):
+                    randomize=False, subunit2sql_uri=None):
         """Partition test_ids by concurrency.
 
         Test durations from the repository are used to get partitions which
@@ -42,6 +44,9 @@ def partition_tests(test_ids, concurrency, repository, group_callback,
             identifier will be kept on the same worker.
         :param bool randomize: If true each partition's test order will be
                             randomized
+        :param str subunit2sql_uri: A sqlalchemy uri string for an external
+            subunit2sql DB that will be used to get historical timing data
+            instead of using the configured repository.
 
         :return: A list where each element is a distinct subset of test_ids,
             and the union of all the elements is equal to set(test_ids).
@@ -50,7 +55,36 @@ def partition_tests(test_ids, concurrency, repository, group_callback,
         partitions = [list() for i in range(concurrency)]
         timed_partitions = [[0.0, partition] for partition in partitions]
         time_data = {}
-        if repository:
+        if subunit2sql_uri:
+            try:
+                import sqlalchemy
+            except ImportError:
+                print('sqlalchemy not installed. Please install sqlachemy to '
+                      'use external DB based scheduling')
+                sys.exit(1)
+            try:
+                from subunit2sql.db import api as api
+            except ImportError:
+                print('subunit2sql not installed. Please install subunit2sql '
+                      'to use external DB based scheduling')
+                sys.exit(1)
+            attrless_test_ids = {}
+            for test_id in test_ids:
+                attrless_test_ids[utils.cleanup_test_name(test_id)] = test_id
+            engine = sqlalchemy.create_engine(subunit2sql_uri)
+            session = sqlalchemy.orm.sessionmaker(bind=engine)()
+            raw_db = api.get_tests_by_test_ids(list(attrless_test_ids.keys()),
+                                               session)
+            session.close()
+            timed_tests = {}
+            unknown_tests = []
+            for test in raw_db:
+                test_id = test.test_id
+                print('processing test_id: %s' % test_id)
+                original_test_id = attrless_test_ids[test_id]
+                timed_tests[original_test_id] = test.run_time
+            unknown_tests = test_ids - set(timed_tests)
+        elif repository:
             time_data = repository.get_test_times(test_ids)
             timed_tests = time_data['known']
             unknown_tests = time_data['unknown']
