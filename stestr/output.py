@@ -10,6 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import io
 import sys
 
 import six
@@ -77,7 +78,7 @@ def output_tests(tests, output=sys.stdout):
         # On Python 2.6 id() returns bytes.
         id_str = test.id()
         if type(id_str) is bytes:
-            id_str = id_str.decode('utf8')
+            id_str = id_str.decode('latin-1')
         output.write(id_str)
         output.write(six.text_type('\n'))
 
@@ -172,20 +173,20 @@ class ReturnCodeToSubunit(object):
         self.proc = process
         self.done = False
         self.source = self.proc.stdout
-        self.lastoutput = six.binary_type(('\n').encode('utf8')[0])
+        self.lastoutput = '\n'.encode('latin-1')[0]
 
     def _append_return_code_as_test(self):
         if self.done is True:
             return
-        self.source = six.BytesIO()
+        self.source = io.BytesIO()
         returncode = self.proc.wait()
         if returncode != 0:
-            if self.lastoutput != six.binary_type(('\n').encode('utf8')[0]):
+            if self.lastoutput != '\n'.encode('latin-1')[0]:
                 # Subunit V1 is line orientated, it has to start on a fresh
                 # line. V2 needs to start on any fresh utf8 character border
                 # - which is not guaranteed in an arbitrary stream endpoint, so
                 # injecting a \n gives us such a guarantee.
-                self.source.write(six.binary_type('\n'))
+                self.source.write('\n'.encode('latin-1'))
             stream = subunit.StreamResultToBytes(self.source)
             stream.status(test_id='process-returncode', test_status='fail',
                           file_name='traceback',
@@ -197,7 +198,7 @@ class ReturnCodeToSubunit(object):
 
     def read(self, count=-1):
         if count == 0:
-            return six.text_type('')
+            return ''.encode('latin-1')
         result = self.source.read(count)
         if result:
             self.lastoutput = result[-1]

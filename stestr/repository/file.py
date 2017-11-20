@@ -141,7 +141,7 @@ class Repository(repository.AbstractRepository):
             result = {}
             for test_id in test_ids:
                 if type(test_id) != str:
-                    test_id = test_id.encode('utf8')
+                    test_id = test_id.encode('latin-1')
                 stripped_test_id = utils.cleanup_test_name(test_id)
                 # gdbm does not support get().
                 try:
@@ -262,7 +262,7 @@ class _SafeInserter(object):
             db_times = {}
             for key, value in self._times.items():
                 if type(key) != str:
-                    key = key.encode('utf8')
+                    key = key.encode('latin-1')
                 db_times[key] = value
             if getattr(db, 'update', None):
                 db.update(db_times)

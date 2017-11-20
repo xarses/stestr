@@ -10,6 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import io
 import os
 import re
 import signal
@@ -205,9 +206,9 @@ class TestProcessorFixture(fixtures.Fixture):
             sys.stdout.write("\n=========================\n"
                              "Failures during discovery"
                              "\n=========================\n")
-            new_out = six.BytesIO()
+            new_out = io.BytesIO()
             v2.ByteStreamToStreamResult(
-                six.BytesIO(out), 'stdout').run(
+                io.BytesIO(out), 'stdout').run(
                     results.CatFiles(new_out))
             out = new_out.getvalue()
             if out:
